@@ -28,13 +28,12 @@ const FinalCTA = () => (
           size="xl"
           onClick={() => document.getElementById("top")?.scrollIntoView({ behavior: "smooth" })}
         >
-          Get My Free Consultation
+          Call us at 16138839236
           <ArrowRight className="w-5 h-5" />
         </Button>
         <Button asChild variant="outline-light" size="xl">
-          <a href="tel:+16135550199">
+          <a href="tel:+16138839236">
             <Phone className="w-5 h-5" />
-            Call Us Directly
           </a>
         </Button>
       </div>
