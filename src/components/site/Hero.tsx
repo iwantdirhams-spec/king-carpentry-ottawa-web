@@ -5,31 +5,50 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { Star, Phone, MapPin } from "lucide-react";
 import heroImg from "@/assets/hero.jpg";
+import { supabase } from "@/integrations/supabase/client";
 
 const Hero = () => {
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
     const data = new FormData(form);
     const name = String(data.get("name") || "").trim();
     const email = String(data.get("email") || "").trim();
     const phone = String(data.get("phone") || "").trim();
+    const projectType = String(data.get("project") || "").trim();
+    const message = String(data.get("message") || "").trim();
 
     if (!name || name.length > 100) return toast({ title: "Please enter your name." });
     if (!/^\S+@\S+\.\S+$/.test(email) || email.length > 255) return toast({ title: "Please enter a valid email." });
     if (!phone || phone.length > 30) return toast({ title: "Please enter a valid phone number." });
+    if (!projectType) return toast({ title: "Please select a project type." });
 
     setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
-      form.reset();
-      toast({
-        title: "Request received",
-        description: "Thanks! A King Carpentry specialist will call you within 24 hours.",
+    const { error } = await supabase.from("contact_submissions").insert({
+      name,
+      email,
+      phone,
+      project_type: projectType,
+      message: message || null,
+    });
+    setSubmitting(false);
+
+    if (error) {
+      console.error("Contact form submission error:", error);
+      return toast({
+        title: "Something went wrong",
+        description: "Please try again or call us directly.",
+        variant: "destructive",
       });
-    }, 700);
+    }
+
+    form.reset();
+    toast({
+      title: "Request received",
+      description: "Thanks! A King Carpentry specialist will call you within 24 hours.",
+    });
   };
 
   return (
