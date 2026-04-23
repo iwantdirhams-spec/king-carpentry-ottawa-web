@@ -33,6 +33,14 @@ const Hero = () => {
       project_type: projectType,
       message: message || null,
     });
+
+    // Mirror to external Supabase project (best-effort, non-blocking failure)
+    supabase.functions
+      .invoke("mirror-contact", {
+        body: { name, email, phone, project_type: projectType, message: message || null },
+      })
+      .catch((err) => console.error("Mirror invoke failed:", err));
+
     setSubmitting(false);
 
     if (error) {
