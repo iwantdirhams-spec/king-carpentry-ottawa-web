@@ -1,6 +1,10 @@
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 
 const EXTERNAL_URL = "https://brbokborogeoyseursvv.supabase.co";
+const JSON_HEADERS = { ...corsHeaders, "Content-Type": "application/json" };
+
+const json = (body: Record<string, unknown>, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -8,15 +12,13 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const serviceKey = Deno.env.get("EXTERNAL_SUPABASE_SERVICE_ROLE_KEY");
+    const serviceKey = Deno.env.get("EXTERNAL_SUPABASE_SERVICE_ROLE_KEY")?.trim();
     if (!serviceKey) {
-      return new Response(
-        JSON.stringify({ error: "EXTERNAL_SUPABASE_SERVICE_ROLE_KEY is not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      console.error("EXTERNAL_SUPABASE_SERVICE_ROLE_KEY is not configured");
+      return json({ success: false, mirrored: false, reason: "missing_service_key" }, 500);
     }
 
-    const body = await req.json();
+    const body = await req.json().catch(() => null);
     const { name, email, phone, project_type, message } = body ?? {};
 
     if (
@@ -26,10 +28,7 @@ Deno.serve(async (req) => {
       typeof project_type !== "string" || !project_type.trim() ||
       (message !== null && message !== undefined && (typeof message !== "string" || message.length > 1000))
     ) {
-      return new Response(JSON.stringify({ error: "Invalid input" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ error: "Invalid input" }, 400);
     }
 
     const payload = {
@@ -37,7 +36,7 @@ Deno.serve(async (req) => {
       email: email.trim(),
       phone: phone.trim(),
       project_type: project_type.trim(),
-      message: message ? String(message).trim() : null,
+      message: typeof message === "string" && message.trim() ? message.trim() : null,
     };
 
     const res = await fetch(`${EXTERNAL_URL}/rest/v1/contact_submissions`, {
@@ -54,22 +53,18 @@ Deno.serve(async (req) => {
     if (!res.ok) {
       const text = await res.text();
       console.error("Mirror failed", res.status, text);
-      return new Response(
-        JSON.stringify({ error: "Mirror failed", status: res.status, details: text }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return json({
+        success: false,
+        mirrored: false,
+        reason: "external_insert_failed",
+        status: res.status,
+      });
     }
 
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json({ success: true, mirrored: true });
   } catch (e) {
     console.error("Mirror error", e);
     const msg = e instanceof Error ? e.message : "Unknown error";
-    return new Response(JSON.stringify({ error: msg }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json({ success: false, mirrored: false, reason: msg });
   }
 });

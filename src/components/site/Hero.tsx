@@ -52,6 +52,22 @@ const Hero = () => {
       });
     }
 
+    void supabase.functions
+      .invoke("mirror-contact", {
+        body: { name, email, phone, project_type: projectType, message: message || null },
+      })
+      .then(({ error: mirrorError, data }) => {
+        if (mirrorError) {
+          console.error("Mirror invoke failed:", mirrorError);
+          return;
+        }
+
+        if (data && typeof data === "object" && "mirrored" in data && !data.mirrored) {
+          console.error("Mirror request was not completed:", data);
+        }
+      })
+      .catch((err) => console.error("Mirror invoke failed:", err));
+
     form.reset();
     toast({
       title: "Request received",
